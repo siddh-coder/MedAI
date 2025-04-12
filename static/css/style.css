@@ -1,0 +1,8 @@
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+.stApp {
+    max-width: 1200px;
+    margin: 0 auto;
+}

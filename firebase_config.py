@@ -9,7 +9,9 @@ def initialize_firebase():
                 # Use secrets from Streamlit Cloud
                 firebase_creds = st.secrets["FIREBASE"]
                 cred = credentials.Certificate(dict(firebase_creds))
+                st.info("Initialized Firebase from Streamlit secrets.")
             else:
+                # Fallback to local file (for local development)
                 service_account_path = "service-account-key.json"
                 if not os.path.exists(service_account_path):
                     st.error("Firebase service account key not found. Please add 'service-account-key.json' or define FIREBASE in Streamlit secrets.")
@@ -20,8 +22,13 @@ def initialize_firebase():
             firebase_admin.initialize_app(cred)
 
         except Exception as e:
-            st.error(f"Error initializing Firebase: {str(e)}")
-            st.stop()
+            #st.error(f"Error initializing Firebase: {str(e)}")
+            service_account_path = "service-account-key.json"
+            if not os.path.exists(service_account_path):
+                st.error("Firebase service account key not found. Please add 'service-account-key.json' or define FIREBASE in Streamlit secrets.")
+                st.stop()
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred)
 
     return firestore.client()
 

@@ -1,0 +1,599 @@
+Directory Structure:
+
+└── ./
+    ├── components
+    │   └── sidebar.py
+    ├── functions
+    │   ├── admin_dashboard.py
+    │   ├── doctor_dashboard.py
+    │   ├── home.py
+    │   └── patient_dashboard.py
+    ├── static
+    │   └── css
+    │       └── style.css
+    ├── utils
+    │   ├── auth.py
+    │   └── database.py
+    ├── app.py
+    ├── firebase_config.py
+    └── test.py
+
+
+
+---
+File: /components/sidebar.py
+---
+
+import streamlit as st
+from utils.auth import logout, check_authentication
+
+def render_sidebar():
+    with st.sidebar:
+        st.title("MedAI")
+        st.image("static/images/doctors-animate.svg", width=200)
+        
+        if check_authentication():
+            st.write(f"Welcome, {st.session_state.user['username']}!")
+            st.subheader("Navigation")
+            
+            if st.button("Home"):
+                st.session_state.current_page = 'home'
+                st.rerun()
+            
+            if st.session_state.user_type == 'patient':
+                if st.button("My Dashboard"):
+                    st.session_state.current_page = 'patient_dashboard'
+                    st.rerun()
+                
+                if st.button("Book Appointment"):
+                    st.session_state.current_page = 'appointment'
+                    st.rerun()
+                
+                if st.button("Disease Predictor"):
+                    st.session_state.current_page = 'disease_predictor'
+                    st.rerun()
+                
+            elif st.session_state.user_type == 'doctor':
+                if st.button("My Dashboard"):
+                    st.session_state.current_page = 'doctor_dashboard'
+                    st.rerun()
+                
+                if st.button("View Appointments"):
+                    st.session_state.current_page = 'doctor_appointments'
+                    st.rerun()
+                
+            elif st.session_state.user_type == 'admin':
+                if st.button("Admin Dashboard"):
+                    st.session_state.current_page = 'admin_dashboard'
+                    st.rerun()
+            
+            if st.button("Blogs"):
+                st.session_state.current_page = 'blog'
+                st.rerun()
+                
+            if st.button("Scans"):
+                st.session_state.current_page = 'scans'
+                st.rerun()
+                
+            if st.button("Video Call"):
+                st.session_state.current_page = 'video_call'
+                st.rerun()
+            
+            # Logout button
+            if st.button("Logout"):
+                logout()
+                st.rerun()
+                
+        else:
+            st.info("Please login or register to access all features")
+
+
+
+---
+File: /functions/admin_dashboard.py
+---
+
+import streamlit as st
+
+def show():
+    st.title("Admin Dashboard")
+    st.info("Admin dashboard is under construction")
+
+
+
+---
+File: /functions/doctor_dashboard.py
+---
+
+import streamlit as st
+
+def show():
+    st.title("Doctor Dashboard")
+    st.info("Doctor dashboard is under construction")
+
+
+
+---
+File: /functions/home.py
+---
+
+import streamlit as st
+from utils.auth import login_user, register_user
+import time
+
+def show():
+    st.title("Welcome to MedAI")
+    st.write("""
+    MedAI is a healthcare management system that aims to assist patients in obtaining 
+    the necessary medical care for their needs. Register as a patient or doctor, book appointments, 
+    and use our disease prediction feature based on symptoms.
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.header("Login")
+        with st.form("login_form"):
+            login_email = st.text_input("Email", key="login_email")
+            login_password = st.text_input("Password", type="password", key="login_password")
+            login_submit = st.form_submit_button("Login")
+            
+            if login_submit:
+                if not login_email or not login_password:
+                    st.error("Please fill in all fields")
+                else:
+                    success, result = login_user(login_email, login_password)
+                    if success:
+                        st.success("Login successful!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(result)
+    
+    with col2:
+        st.header("Register")
+        with st.form("register_form"):
+            username = st.text_input("Username")
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            confirm_password = st.text_input("Confirm Password", type="password")
+            user_type = st.selectbox("Register as", ["patient", "doctor"])
+            
+            # Additional fields for doctors
+            additional_info = {}
+            if user_type == "doctor":
+                specialization = st.text_input("Specialization")
+                experience = st.number_input("Years of Experience", min_value=0, value=0)
+                qualification = st.text_input("Qualification")
+                additional_info = {
+                    "specialization": specialization,
+                    "experience": experience,
+                    "qualification": qualification
+                }
+            
+            register_submit = st.form_submit_button("Register")
+            
+            if register_submit:
+                if not username or not email or not password or not confirm_password:
+                    st.error("Please fill in all fields")
+                elif password != confirm_password:
+                    st.error("Passwords do not match")
+                else:
+                    success, result = register_user(username, email, password, user_type, additional_info)
+                    if success:
+                        st.success("Registration successful! Please login.")
+                    else:
+                        st.error(result)
+    
+    st.header("Features")
+    feature_col1, feature_col2, feature_col3 = st.columns(3)
+    
+    with feature_col1:
+        st.subheader("🩺 Appointment Booking")
+        st.write("Book appointments with qualified doctors based on your medical needs.")
+    
+    with feature_col2:
+        st.subheader("🔍 Disease Prediction")
+        st.write("Get preliminary disease predictions based on your symptoms.")
+    
+    with feature_col3:
+        st.subheader("💊 Health Resources")
+        st.write("Access informative blogs and resources about various health topics.")
+
+
+
+---
+File: /functions/patient_dashboard.py
+---
+
+import streamlit as st
+
+def show():
+    st.title("Patient Dashboard")
+    st.info("Patient dashboard is under construction")
+
+
+
+---
+File: /static/css/style.css
+---
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+.stApp {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+
+
+---
+File: /utils/auth.py
+---
+
+import streamlit as st
+import bcrypt
+from firebase_config import get_db
+import re
+from datetime import datetime
+
+db = get_db()
+
+def hash_password(password):
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def verify_password(stored_password, provided_password):
+    return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password.encode('utf-8'))
+
+def register_user(username, email, password, user_type, additional_info=None):
+    users_ref = db.collection('users')
+    query = users_ref.where('email', '==', email).limit(1).get()
+    
+    if len(query) > 0:
+        return False, "Email already registered"
+
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return False, "Invalid email format"
+    
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long"
+    
+    user_data = {
+        'username': username,
+        'email': email,
+        'password': hash_password(password),
+        'user_type': user_type,
+        'created_at': datetime.now(),
+    }
+    
+    if user_type == 'doctor' and additional_info:
+        user_data.update(additional_info)
+    
+    user_ref = users_ref.add(user_data)
+    
+    return True, user_ref[1].id
+
+def login_user(email, password):
+    users_ref = db.collection('users')
+    query = users_ref.where('email', '==', email).limit(1).get()
+    
+    if not query:
+        return False, "Email not found"
+    
+    user_doc = query[0]
+    user_data = user_doc.to_dict()
+    
+    if verify_password(user_data['password'], password):
+        user_info = {
+            'id': user_doc.id,
+            'username': user_data['username'],
+            'email': user_data['email'],
+            'user_type': user_data['user_type']
+        }
+        
+        st.session_state.user = user_info
+        st.session_state.user_type = user_data['user_type']
+        st.session_state.authenticated = True
+        
+        return True, user_info
+    else:
+        return False, "Incorrect password"
+
+def check_authentication():
+    return st.session_state.authenticated and st.session_state.user is not None
+
+def logout():
+    st.session_state.user = None
+    st.session_state.user_type = None
+    st.session_state.authenticated = False
+    st.session_state.current_page = 'home'
+
+
+
+---
+File: /utils/database.py
+---
+
+from firebase_config import get_db
+from datetime import datetime
+
+db = get_db()
+
+def get_user_by_id(user_id):
+    user_doc = db.collection('users').document(user_id).get()
+    if user_doc.exists:
+        user_data = user_doc.to_dict()
+        user_data['id'] = user_id
+        return user_data
+    return None
+
+def get_doctors():
+    doctors = []
+    docs = db.collection('users').where('user_type', '==', 'doctor').get()
+    
+    for doc in docs:
+        doctor_data = doc.to_dict()
+        doctor_data['id'] = doc.id
+        doctors.append(doctor_data)
+    
+    return doctors
+
+def create_appointment(patient_id, doctor_id, date, time, symptoms, status="pending"):
+    appointment_data = {
+        'patient_id': patient_id,
+        'doctor_id': doctor_id,
+        'date': date,
+        'time': time,
+        'symptoms': symptoms,
+        'status': status,
+        'created_at': datetime.now()
+    }
+    
+    appointment_ref = db.collection('appointments').add(appointment_data)
+    return appointment_ref[1].id
+
+def get_patient_appointments(patient_id):
+    appointments = []
+    docs = db.collection('appointments').where('patient_id', '==', patient_id).get()
+    
+    for doc in docs:
+        apt_data = doc.to_dict()
+        apt_data['id'] = doc.id
+        doctor = get_user_by_id(apt_data['doctor_id'])
+        if doctor:
+            apt_data['doctor_name'] = doctor['username']
+            apt_data['doctor_specialization'] = doctor.get('specialization', 'General')
+        
+        appointments.append(apt_data)
+    
+    return appointments
+
+def get_doctor_appointments(doctor_id):
+    appointments = []
+    docs = db.collection('appointments').where('doctor_id', '==', doctor_id).get()
+    
+    for doc in docs:
+        apt_data = doc.to_dict()
+        apt_data['id'] = doc.id
+        patient = get_user_by_id(apt_data['patient_id'])
+        if patient:
+            apt_data['patient_name'] = patient['username']
+        
+        appointments.append(apt_data)
+    
+    return appointments
+
+def update_appointment_status(appointment_id, status):
+    db.collection('appointments').document(appointment_id).update({
+        'status': status,
+        'updated_at': datetime.now()
+    })
+    return True
+
+def update_user_profile(user_id, profile_data):
+    db.collection('users').document(user_id).update({
+        **profile_data,
+        'updated_at': datetime.now()
+    })
+    return True
+
+def add_blog_post(title, content, author_id, category):
+    blog_data = {
+        'title': title,
+        'content': content,
+        'author_id': author_id,
+        'category': category,
+        'created_at': datetime.now()
+    }
+    
+    blog_ref = db.collection('blogs').add(blog_data)
+    return blog_ref[1].id
+
+def get_blog_posts(category=None, limit=10):
+    blogs = []
+    
+    if category:
+        query = db.collection('blogs').where('category', '==', category).limit(limit).get()
+    else:
+        query = db.collection('blogs').limit(limit).get()
+    
+    for doc in query:
+        blog_data = doc.to_dict()
+        blog_data['id'] = doc.id
+        author = get_user_by_id(blog_data['author_id'])
+        if author:
+            blog_data['author_name'] = author['username']
+        
+        blogs.append(blog_data)
+    
+    return blogs
+
+
+
+---
+File: /app.py
+---
+
+import streamlit as st
+import firebase_admin
+from firebase_config import get_db
+import os
+from utils.auth import check_authentication, logout
+from components.sidebar import render_sidebar
+from functions import home, patient_dashboard, doctor_dashboard, admin_dashboard
+
+# Set page configuration
+st.set_page_config(
+    page_title="MedAI - Healthcare Management System",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Initialize database
+db = get_db()
+
+# Initialize session state variables if they don't exist
+if 'user' not in st.session_state:
+    st.session_state.user = None
+if 'user_type' not in st.session_state:
+    st.session_state.user_type = None
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'home'
+    
+# Main application
+def main():
+    # Custom CSS
+    with open('static/css/style.css', 'r') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    
+    # Render sidebar
+    render_sidebar()
+    
+    # Show appropriate page based on user authentication status and type
+    if not st.session_state.authenticated:
+        home.show()
+    else:
+        if st.session_state.current_page == 'home':
+            home.show()
+        elif st.session_state.user_type == 'patient':
+            patient_dashboard.show()
+        elif st.session_state.user_type == 'doctor':
+            doctor_dashboard.show()
+        elif st.session_state.user_type == 'admin':
+            admin_dashboard.show()
+        else:
+            st.error("Unknown user type")
+
+if __name__ == "__main__":
+    main()
+
+
+
+---
+File: /firebase_config.py
+---
+
+import firebase_admin
+from firebase_admin import credentials, firestore
+import streamlit as st
+import os
+def initialize_firebase():
+    if not firebase_admin._apps:
+        try:
+            if "FIREBASE" in st.secrets:
+                # Use secrets from Streamlit Cloud
+                firebase_creds = st.secrets["FIREBASE"]
+                cred = credentials.Certificate(dict(firebase_creds))
+            else:
+                service_account_path = "service-account-key.json"
+                if not os.path.exists(service_account_path):
+                    st.error("Firebase service account key not found. Please add 'service-account-key.json' or define FIREBASE in Streamlit secrets.")
+                    st.stop()
+                cred = credentials.Certificate(service_account_path)
+                st.info("Initialized Firebase from local file.")
+
+            firebase_admin.initialize_app(cred)
+
+        except Exception as e:
+            st.error(f"Error initializing Firebase: {str(e)}")
+            st.stop()
+
+    return firestore.client()
+
+def get_db():
+    return initialize_firebase()
+
+
+
+---
+File: /test.py
+---
+
+import streamlit as st
+import firebase_admin
+from firebase_admin import credentials, firestore
+import os
+import json
+
+st.set_page_config(page_title="Firebase Connection Test")
+
+# Check if Firebase is already initialized
+if not firebase_admin._apps:
+    try:
+        # Path to your service account key
+        service_account_path = "service-account-key.json"
+        
+        # Display service account details (with sensitive info hidden)
+        if os.path.exists(service_account_path):
+            with open(service_account_path, 'r') as f:
+                creds = json.load(f)
+                project_id = creds.get('project_id', 'Unknown')
+                st.success(f"Found service account file for project: {project_id}")
+        else:
+            st.error("Service account key file not found!")
+            st.stop()
+            
+        # Initialize Firebase
+        cred = credentials.Certificate(service_account_path)
+        firebase_admin.initialize_app(cred)
+        st.success("Firebase successfully initialized!")
+    except Exception as e:
+        st.error(f"Error initializing Firebase: {str(e)}")
+        st.stop()
+
+# Get Firestore client
+try:
+    db = firestore.client()
+    st.success("Firestore client created successfully!")
+    
+    # Test writing to Firestore
+    if st.button("Test Database Write"):
+        doc_ref = db.collection('test').document('test_doc')
+        doc_ref.set({
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'message': 'Hello from Streamlit!'
+        })
+        st.success("Successfully wrote to Firestore!")
+    
+    # Test reading from Firestore
+    if st.button("Test Database Read"):
+        docs = db.collection('test').limit(10).get()
+        
+        if docs:
+            st.write("Recent test documents:")
+            for doc in docs:
+                st.write(f"Document ID: {doc.id}")
+                st.write(doc.to_dict())
+        else:
+            st.info("No test documents found. Try writing to the database first.")
+            
+except Exception as e:
+    st.error(f"Error connecting to Firestore: {str(e)}")
+

@@ -1,8 +1,56 @@
 body {
     font-family: 'Roboto', sans-serif;
+    background-color: #f5f7fa;
 }
 
 .stApp {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stButton>button {
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    padding: 10px 20px;
+    transition: background-color 0.3s;
+}
+
+.stButton>button:hover {
+    background-color: #0056b3;
+}
+
+.stSidebar {
+    background-color: #e9ecef;
+    padding: 20px;
+    border-right: 1px solid #dee2e6;
+}
+
+.stTextInput>label, .stSelectbox>label {
+    font-weight: 500;
+    color: #343a40;
+}
+
+.stForm {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+h1, h2, h3 {
+    color: #343a40;
+}
+
+.stMarkdown p {
+    color: #495057;
+    line-height: 1.6;
+}
+
+.stImage {
+    margin: 20px 0;
 }

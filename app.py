@@ -1,55 +1,63 @@
 import streamlit as st
 import firebase_admin
 from firebase_config import get_db
-import os
-from utils.auth import check_authentication, logout
+from utils.auth import check_authentication
 from components.sidebar import render_sidebar
-from functions import home, patient_dashboard, doctor_dashboard, admin_dashboard
+from functions import (
+    home, patient_dashboard, doctor_dashboard, admin_dashboard,
+    appointment, disease_predictor, blog, scans, video_call
+)
 
-# Set page configuration
 st.set_page_config(
     page_title="MedAI - Healthcare Management System",
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Initialize database
 db = get_db()
 
-# Initialize session state variables if they don't exist
-if 'user' not in st.session_state:
-    st.session_state.user = None
-if 'user_type' not in st.session_state:
-    st.session_state.user_type = None
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 'home'
-    
-# Main application
+def init_session_state():
+    defaults = {
+        'user': None,
+        'user_type': None,
+        'authenticated': False,
+        'current_page': 'home',
+        'theme': 'light'
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
 def main():
-    # Custom CSS
+    init_session_state()
+    
     with open('static/css/style.css', 'r') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     
-    # Render sidebar
     render_sidebar()
     
-    # Show appropriate page based on user authentication status and type
-    if not st.session_state.authenticated:
+    page_map = {
+        'home': home,
+        'patient_dashboard': patient_dashboard,
+        'doctor_dashboard': doctor_dashboard,
+        'admin_dashboard': admin_dashboard,
+        'appointment': appointment,
+        'disease_predictor': disease_predictor,
+        'blog': blog,
+        'scans': scans,
+        'video_call': video_call
+    }
+    
+    if not check_authentication():
         home.show()
     else:
-        if st.session_state.current_page == 'home':
-            home.show()
-        elif st.session_state.user_type == 'patient':
-            patient_dashboard.show()
-        elif st.session_state.user_type == 'doctor':
-            doctor_dashboard.show()
-        elif st.session_state.user_type == 'admin':
-            admin_dashboard.show()
+        current_page = st.session_state.current_page
+        if current_page in page_map:
+            page_map[current_page].show()
         else:
-            st.error("Unknown user type")
+            st.error("Page not found")
+            home.show()
 
 if __name__ == "__main__":
     main()

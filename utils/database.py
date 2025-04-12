@@ -14,12 +14,10 @@ def get_user_by_id(user_id):
 def get_doctors():
     doctors = []
     docs = db.collection('users').where('user_type', '==', 'doctor').get()
-    
     for doc in docs:
         doctor_data = doc.to_dict()
         doctor_data['id'] = doc.id
         doctors.append(doctor_data)
-    
     return doctors
 
 def create_appointment(patient_id, doctor_id, date, time, symptoms, status="pending"):
@@ -32,14 +30,12 @@ def create_appointment(patient_id, doctor_id, date, time, symptoms, status="pend
         'status': status,
         'created_at': datetime.now()
     }
-    
     appointment_ref = db.collection('appointments').add(appointment_data)
     return appointment_ref[1].id
 
 def get_patient_appointments(patient_id):
     appointments = []
-    docs = db.collection('appointments').where('patient_id', '==', patient_id).get()
-    
+    docs = db.collection('appointments').where('patient_id', '==', patient_id).order_by('date').get()
     for doc in docs:
         apt_data = doc.to_dict()
         apt_data['id'] = doc.id
@@ -47,24 +43,19 @@ def get_patient_appointments(patient_id):
         if doctor:
             apt_data['doctor_name'] = doctor['username']
             apt_data['doctor_specialization'] = doctor.get('specialization', 'General')
-        
         appointments.append(apt_data)
-    
     return appointments
 
 def get_doctor_appointments(doctor_id):
     appointments = []
-    docs = db.collection('appointments').where('doctor_id', '==', doctor_id).get()
-    
+    docs = db.collection('appointments').where('doctor_id', '==', doctor_id).order_by('date').get()
     for doc in docs:
         apt_data = doc.to_dict()
         apt_data['id'] = doc.id
         patient = get_user_by_id(apt_data['patient_id'])
         if patient:
             apt_data['patient_name'] = patient['username']
-        
         appointments.append(apt_data)
-    
     return appointments
 
 def update_appointment_status(appointment_id, status):
@@ -87,27 +78,28 @@ def add_blog_post(title, content, author_id, category):
         'content': content,
         'author_id': author_id,
         'category': category,
-        'created_at': datetime.now()
+        'created_at': datetime.now(),
+        'views': 0
     }
-    
     blog_ref = db.collection('blogs').add(blog_data)
     return blog_ref[1].id
 
 def get_blog_posts(category=None, limit=10):
     blogs = []
-    
     if category:
-        query = db.collection('blogs').where('category', '==', category).limit(limit).get()
+        query = db.collection('blogs').where('category', '==', category).order_by('created_at', direction='DESCENDING').limit(limit).get()
     else:
-        query = db.collection('blogs').limit(limit).get()
-    
+        query = db.collection('blogs').order_by('created_at', direction='DESCENDING').limit(limit).get()
     for doc in query:
         blog_data = doc.to_dict()
         blog_data['id'] = doc.id
         author = get_user_by_id(blog_data['author_id'])
         if author:
             blog_data['author_name'] = author['username']
-        
         blogs.append(blog_data)
-    
     return blogs
+
+def increment_blog_views(blog_id):
+    db.collection('blogs').document(blog_id).update({
+        'views': firestore.Increment(1)
+    })

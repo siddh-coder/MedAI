@@ -4,10 +4,9 @@ import time
 
 def show():
     st.title("Welcome to MedAI")
-    st.write("""
-    MedAI is a healthcare management system that aims to assist patients in obtaining 
-    the necessary medical care for their needs. Register as a patient or doctor, book appointments, 
-    and use our disease prediction feature based on symptoms.
+    st.markdown("""
+    MedAI is your comprehensive healthcare platform. Register as a patient or doctor, 
+    book appointments, predict diseases based on symptoms, and access health resources.
     """)
     
     col1, col2 = st.columns(2)
@@ -27,6 +26,7 @@ def show():
                     if success:
                         st.success("Login successful!")
                         time.sleep(1)
+                        st.session_state.current_page = f"{st.session_state.user_type}_dashboard"
                         st.rerun()
                     else:
                         st.error(result)
@@ -38,9 +38,8 @@ def show():
             email = st.text_input("Email")
             password = st.text_input("Password", type="password")
             confirm_password = st.text_input("Confirm Password", type="password")
-            user_type = st.selectbox("Register as", ["patient", "doctor"])
+            user_type = st.selectbox("Register as", ["patient", "doctor", "admin"], key="register_user_type")
             
-            # Additional fields for doctors
             additional_info = {}
             if user_type == "doctor":
                 specialization = st.text_input("Specialization")
@@ -55,7 +54,7 @@ def show():
             register_submit = st.form_submit_button("Register")
             
             if register_submit:
-                if not username or not email or not password or not confirm_password:
+                if not all([username, email, password, confirm_password]):
                     st.error("Please fill in all fields")
                 elif password != confirm_password:
                     st.error("Passwords do not match")
@@ -63,20 +62,21 @@ def show():
                     success, result = register_user(username, email, password, user_type, additional_info)
                     if success:
                         st.success("Registration successful! Please login.")
+                        time.sleep(1)
                     else:
                         st.error(result)
     
     st.header("Features")
-    feature_col1, feature_col2, feature_col3 = st.columns(3)
+    cols = st.columns(3)
     
-    with feature_col1:
+    with cols[0]:
         st.subheader("🩺 Appointment Booking")
-        st.write("Book appointments with qualified doctors based on your medical needs.")
+        st.write("Schedule consultations with qualified doctors tailored to your needs.")
     
-    with feature_col2:
+    with cols[1]:
         st.subheader("🔍 Disease Prediction")
-        st.write("Get preliminary disease predictions based on your symptoms.")
+        st.write("Get preliminary diagnoses based on symptoms using AI.")
     
-    with feature_col3:
+    with cols[2]:
         st.subheader("💊 Health Resources")
-        st.write("Access informative blogs and resources about various health topics.")
+        st.write("Explore blogs and guides on various health topics.")

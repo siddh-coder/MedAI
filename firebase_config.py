@@ -34,4 +34,3 @@ def initialize_firebase():
 
 def get_db():
     return initialize_firebase()
-

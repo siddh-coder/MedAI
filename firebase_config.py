@@ -9,8 +9,6 @@ def initialize_firebase():
                 # Use secrets from Streamlit Cloud
                 firebase_creds = st.secrets["FIREBASE"]
                 cred = credentials.Certificate(dict(firebase_creds))
-                st.info("Initialized Firebase from Streamlit secrets.")
-                print("not in secrets")
             else:
                 service_account_path = "service-account-key.json"
                 if not os.path.exists(service_account_path):

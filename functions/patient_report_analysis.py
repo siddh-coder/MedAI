@@ -1,9 +1,26 @@
 import streamlit as st
-import tempfile
 import os
 from google import genai
+import json
+import re
+from utils.database import get_doctors
 
 GEMINI_API_KEY = "AIzaSyBNeVIUC4v1I8dptR4w6YvAVhhqvA1KZAw"
+
+def extract_json(text):
+    text = text.strip()
+    if text.startswith('```'):
+        text = re.sub(r'^```[a-zA-Z]*', '', text)
+        text = text.strip('`\n')
+    match = re.search(r'\{[\s\S]*\}', text)
+    if match:
+        json_str = match.group(0)
+        try:
+            return json.loads(json_str)
+        except Exception:
+            pass
+    return None
+
 def show():
     st.title("Medical Report Analysis (AI)")
     st.info("Upload your medical report (PDF, PNG, JPEG). Gemini AI will analyze and suggest a specialist.")
@@ -15,78 +32,43 @@ def show():
     )
 
     if uploaded_file is not None:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            tmp_path = tmp_file.name
-
         if not GEMINI_API_KEY:
-            st.error("Gemini API key not set. Please provide your API key in the script.")
-            os.unlink(tmp_path)
+            st.error("Gemini API key not set. Please contact admin.")
             return
-
         try:
-            client = genai.Client(api_key=GEMINI_API_KEY)
-            myfile = client.files.upload(file=tmp_path)
-            # Custom prompt to get structured specializations
-            prompt = (
-                "Analyze this medical report and recommend which type(s) of doctor the patient should be referred to. "
-                "Please output your answer as a JSON object with a 'specializations' field, which is a list of recommended specializations. "
-                "Example: {\"specializations\": [\"cardiologist\", \"endocrinologist\"]}. "
-                "If you have a textual explanation, include it in an 'explanation' field."
-            )
-            with st.spinner("Analyzing with Gemini..."):
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=[myfile, prompt]
-                )
-            import json
-            import re
-            st.subheader("Gemini AI Recommendation")
-            def extract_json(text):
-                # Remove markdown code block markers
-                text = text.strip()
-                if text.startswith('```'):
-                    text = re.sub(r'^```[a-zA-Z]*', '', text)
-                    text = text.strip('`\n')
-                # Extract first JSON object
-                match = re.search(r'\{[\s\S]*\}', text)
-                if match:
-                    json_str = match.group(0)
-                    try:
-                        return json.loads(json_str)
-                    except Exception:
-                        pass
-                return None
-            gemini_data = extract_json(response.text)
-            if gemini_data:
-                specializations = gemini_data.get("specializations", [])
-                explanation = gemini_data.get("explanation", "")
+            file_bytes = uploaded_file.read()
+            file_name = uploaded_file.name
+            file_ext = os.path.splitext(file_name)[1].lower()
+            # Use file_bytes directly for PDF inference
+            if file_ext == '.pdf':
+                gemini_input = {"file": file_bytes, "file_type": "pdf"}
             else:
-                specializations = []
-                explanation = response.text
-            st.write(explanation)
-            if specializations:
-                st.markdown("### Doctors Matching Recommendation:")
-                from utils.database import get_doctors
+                gemini_input = {"file": file_bytes, "file_type": "image"}
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel("gemini-pro-vision")
+            response = model.generate_content([
+                "Analyze this medical report and suggest the top 1-2 doctor specializations to consult, and explain why. Respond ONLY in this JSON format: {\"specializations\": [\"specialization1\", ...], \"explanation\": \"...\"}",
+                gemini_input
+            ])
+            ai_text = response.text
+            result_json = extract_json(ai_text)
+            if result_json and 'specializations' in result_json:
+                st.success(f"Recommended Specializations: {', '.join(result_json['specializations'])}")
+                st.markdown(f"**AI Explanation:** {result_json.get('explanation', '')}")
                 doctors = get_doctors()
-                matched = [d for d in doctors if str(d.get('specialization', '')).strip().lower() in [s.lower() for s in specializations]]
+                matched = [doc for doc in doctors if any(
+                    spec.lower() in doc.get('specialization', '').lower() for spec in result_json['specializations'])]
                 if matched:
+                    st.subheader("Matching Doctors:")
                     for doc in matched:
-                        col1, col2 = st.columns([3,1])
-                        with col1:
-                            st.write(f"**Dr. {doc['username']}**  ")
-                            st.write(f"Specialization: {doc.get('specialization','N/A')}")
-                            st.write(f"Experience: {doc.get('experience','N/A')} years")
-                        with col2:
-                            if st.button(f"Book Appointment", key=f"book_{doc['id']}"):
-                                st.session_state.selected_doctor_id = doc['id']
-                                st.session_state.current_page = 'appointment'
-                                st.rerun()
+                        st.write(f"Dr. {doc['username']} ({doc.get('specialization', 'General')})")
+                        if st.button("Book Appointment", key=f"book_{doc['id']}"):
+                            st.session_state.selected_doctor_id = doc['id']
+                            st.session_state.current_page = 'appointment'
+                            st.rerun()
                 else:
                     st.info("No doctors found with the recommended specialization.")
             else:
                 st.info("No specialization could be extracted from Gemini's response.")
         except Exception as e:
-            st.error(f"Error communicating with Gemini: {e}")
-        finally:
-            os.unlink(tmp_path)
+            st.error(f"Error communicating with Gemini: {e}. Raw response: {locals().get('ai_text', 'No response')}")

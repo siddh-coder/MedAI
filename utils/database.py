@@ -103,3 +103,12 @@ def increment_blog_views(blog_id):
     db.collection('blogs').document(blog_id).update({
         'views': firestore.Increment(1)
     })
+
+def modify_appointment(appointment_id, date, time, symptoms):
+    db.collection('appointments').document(appointment_id).update({
+        'date': date,
+        'time': time,
+        'symptoms': symptoms,
+        'updated_at': datetime.now()
+    })
+    return True

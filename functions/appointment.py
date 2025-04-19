@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.database import get_doctors, create_appointment, get_patient_appointments
+from utils.database import get_doctors, create_appointment, get_patient_appointments, update_appointment_status, modify_appointment
 from datetime import datetime, timedelta
 
 def show():
@@ -12,13 +12,22 @@ def show():
     user = st.session_state.user
     st.header("Book a New Appointment")
     
-    doctors = get_doctors()
+    try:
+        doctors = get_doctors()
+    except Exception as e:
+        st.error(f"Failed to fetch doctors: {e}")
+        doctors = []
+    
     if not doctors:
         st.warning("No doctors available at the moment.")
         return
     
     doctor_options = {f"Dr. {d['username']} ({d.get('specialization', 'General')})": d['id'] for d in doctors}
-    selected_doctor = st.selectbox("Select Doctor", list(doctor_options.keys()))
+    reverse_doctor_options = {v: k for k, v in doctor_options.items()}
+    default_doctor = None
+    if 'selected_doctor_id' in st.session_state and st.session_state.selected_doctor_id in reverse_doctor_options:
+        default_doctor = reverse_doctor_options[st.session_state.selected_doctor_id]
+    selected_doctor = st.selectbox("Select Doctor", list(doctor_options.keys()), index=list(doctor_options.keys()).index(default_doctor) if default_doctor else 0)
     date = st.date_input("Select Date", min_value=datetime.now().date())
     time = st.time_input("Select Time")
     symptoms = st.text_area("Describe Your Symptoms")
@@ -28,29 +37,66 @@ def show():
             st.error("Please describe your symptoms.")
         else:
             doctor_id = doctor_options[selected_doctor]
-            create_appointment(
-                patient_id=user['id'],
-                doctor_id=doctor_id,
-                date=date.strftime('%Y-%m-%d'),
-                time=time.strftime('%H:%M'),
-                symptoms=symptoms
-            )
-            st.success("Appointment booked successfully!")
+            try:
+                create_appointment(
+                    patient_id=user['id'],
+                    doctor_id=doctor_id,
+                    date=date.strftime('%Y-%m-%d'),
+                    time=time.strftime('%H:%M'),
+                    symptoms=symptoms
+                )
+                st.success("Appointment booked successfully!")
+            except Exception as e:
+                st.error(f"Failed to book appointment: {e}")
+            if 'selected_doctor_id' in st.session_state:
+                del st.session_state.selected_doctor_id
+            st.session_state['modify_open'] = None
             st.rerun()
     
     st.subheader("Your Upcoming Appointments")
-    appointments = get_patient_appointments(user['id'])
+    try:
+        appointments = get_patient_appointments(user['id'])
+    except Exception as e:
+        st.error(f"Could not fetch appointments: {e}")
+        appointments = []
     
     if not appointments:
         st.info("No upcoming appointments.")
     else:
+        modify_open = st.session_state.get('modify_open', None)
         for apt in appointments:
-            with st.expander(f"Appointment with Dr. {apt['doctor_name']} - {apt['date']}"):
-                st.write(f"**Specialization**: {apt['doctor_specialization']}")
+            with st.expander(f"Appointment with Dr. {apt.get('doctor_name', 'Unknown')} - {apt['date']}"):
+                st.write(f"**Specialization**: {apt.get('doctor_specialization', 'General')}")
                 st.write(f"**Time**: {apt['time']}")
                 st.write(f"**Symptoms**: {apt['symptoms']}")
                 st.write(f"**Status**: {apt['status'].capitalize()}")
-                if apt['status'] == 'pending' and st.button("Cancel", key=f"cancel_{apt['id']}"):
-                    update_appointment_status(apt['id'], 'cancelled')
-                    st.success("Appointment cancelled.")
-                    st.rerun()
+                if apt['status'] == 'pending':
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Cancel", key=f"cancel_{apt['id']}"):
+                            try:
+                                update_appointment_status(apt['id'], 'cancelled')
+                                st.success("Appointment cancelled.")
+                            except Exception as e:
+                                st.error(f"Failed to cancel appointment: {e}")
+                            st.session_state['modify_open'] = None
+                            st.rerun()
+                    with col2:
+                        if st.button("Modify", key=f"modify_{apt['id']}"):
+                            if modify_open is None:
+                                st.session_state['modify_open'] = apt['id']
+                                st.rerun()
+                            else:
+                                st.error("Please close the other modify form first.")
+                    if modify_open == apt['id']:
+                        new_date = st.date_input("New Date", value=datetime.strptime(apt['date'], '%Y-%m-%d').date(), key=f"date_{apt['id']}")
+                        new_time = st.time_input("New Time", value=datetime.strptime(apt['time'], '%H:%M').time(), key=f"time_{apt['id']}")
+                        new_symptoms = st.text_area("Update Symptoms", value=apt['symptoms'], key=f"symptoms_{apt['id']}")
+                        if st.button("Save Changes", key=f"save_{apt['id']}"):
+                            try:
+                                modify_appointment(apt['id'], new_date.strftime('%Y-%m-%d'), new_time.strftime('%H:%M'), new_symptoms)
+                                st.success("Appointment modified.")
+                            except Exception as e:
+                                st.error(f"Failed to modify appointment: {e}")
+                            st.session_state['modify_open'] = None
+                            st.rerun()

@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from google.generativeai import genai
+import google.generativeai as genai
 import json
 import re
 from utils.database import get_doctors

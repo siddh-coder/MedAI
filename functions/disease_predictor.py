@@ -10,27 +10,26 @@ def show():
         st.error("This feature is available only to patients.")
         return
     
-    symptoms_df = pd.read_csv("static/data/symptoms.csv")
-    symptom_columns = [col for col in symptoms_df.columns if col != 'disease']
+    symptoms_df = pd.read_csv("models/csv/Training.csv")
+    symptom_columns = [col for col in symptoms_df.columns if col != 'prognosis']
     
     st.subheader("Select Your Symptoms")
-    selected_symptoms = {}
-    cols = st.columns(3)
-    
-    for idx, symptom in enumerate(symptom_columns):
-        with cols[idx % 3]:
-            selected_symptoms[symptom] = st.checkbox(symptom, key=f"symptom_{symptom}")
+    # Multiselect for symptoms
+    selected_symptom_names = st.multiselect(
+        "Select your symptoms",
+        options=symptom_columns,
+        help="Start typing to search for symptoms"
+    )
     
     if st.button("Predict Disease"):
-        if not any(selected_symptoms.values()):
+        if not selected_symptom_names:
             st.error("Please select at least one symptom.")
         else:
-            symptom_input = [1 if selected_symptoms[symptom] else 0 for symptom in symptom_columns]
-            prediction, probability = predict_disease(symptom_input)
+            top_diseases = predict_disease(selected_symptom_names)
             
             st.subheader("Prediction Results")
-            st.write(f"**Predicted Disease**: {prediction}")
-            st.write(f"**Confidence**: {probability:.2%}")
+            for disease, prob in top_diseases:
+                st.write(f"**{disease}**: {prob:.2%}")
             st.warning("This is a preliminary prediction. Please consult a doctor for an accurate diagnosis.")
             
             with st.expander("Next Steps"):

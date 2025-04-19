@@ -36,20 +36,32 @@ def show():
             st.error("Gemini API key not set. Please contact admin.")
             return
         try:
+            import io
             file_bytes = uploaded_file.read()
             file_name = uploaded_file.name
             file_ext = os.path.splitext(file_name)[1].lower()
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel("gemini-pro-vision")
+            client = genai.Client(api_key=GEMINI_API_KEY)
             prompt = "Analyze this medical report and suggest the top 1-2 doctor specializations to consult, and explain why. Respond ONLY in this JSON format: {\"specializations\": [\"specialization1\", ...], \"explanation\": \"...\"}"
             if file_ext == '.pdf':
-                gemini_input = {"file": file_bytes, "file_type": "pdf"}
+                file_io = io.BytesIO(file_bytes)
+                sample_doc = client.files.upload(
+                    file=file_io,
+                    config=dict(mime_type='application/pdf')
+                )
+                response = client.models.generate_content(
+                    model="gemini-1.5-flash",
+                    contents=[sample_doc, prompt]
+                )
             else:
-                gemini_input = {"file": file_bytes, "file_type": "image"}
-            response = model.generate_content([
-                prompt,
-                gemini_input
-            ])
+                file_io = io.BytesIO(file_bytes)
+                sample_doc = client.files.upload(
+                    file=file_io,
+                    config=dict(mime_type='image/jpeg' if file_ext in ['.jpeg', '.jpg'] else 'image/png')
+                )
+                response = client.models.generate_content(
+                    model="gemini-1.5-flash",
+                    contents=[sample_doc, prompt]
+                )
             ai_text = response.text
             result_json = extract_json(ai_text)
             if result_json and 'specializations' in result_json:

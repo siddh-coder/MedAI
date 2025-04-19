@@ -24,6 +24,9 @@ def render_sidebar():
                 if st.button("Disease Predictor", key="sidebar_disease_predictor"):
                     st.session_state.current_page = 'disease_predictor'
                     st.rerun()
+                if st.button("Medical Report Analysis", key="sidebar_patient_report_analysis"):
+                    st.session_state.current_page = 'patient_report_analysis'
+                    st.rerun()
             
             elif st.session_state.user_type == 'doctor':
                 if st.button("My Dashboard", key="sidebar_doctor_dashboard"):

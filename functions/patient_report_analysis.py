@@ -39,17 +39,21 @@ def show():
             file_bytes = uploaded_file.read()
             file_name = uploaded_file.name
             file_ext = os.path.splitext(file_name)[1].lower()
-            # Use file_bytes directly for PDF inference
-            if file_ext == '.pdf':
-                gemini_input = {"file": file_bytes, "file_type": "pdf"}
-            else:
-                gemini_input = {"file": file_bytes, "file_type": "image"}
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel("gemini-pro-vision")
-            response = model.generate_content([
-                "Analyze this medical report and suggest the top 1-2 doctor specializations to consult, and explain why. Respond ONLY in this JSON format: {\"specializations\": [\"specialization1\", ...], \"explanation\": \"...\"}",
-                gemini_input
-            ])
+            prompt = "Analyze this medical report and suggest the top 1-2 doctor specializations to consult, and explain why. Respond ONLY in this JSON format: {\"specializations\": [\"specialization1\", ...], \"explanation\": \"...\"}"
+            if file_ext in ['.png', '.jpeg', '.jpg']:
+                gemini_input = {"mime_type": f"image/{file_ext[1:]}", "data": file_bytes}
+                response = model.generate_content([
+                    prompt,
+                    gemini_input
+                ])
+            elif file_ext == '.pdf':
+                st.error("PDF analysis is not supported by Gemini API directly. Please upload an image file (PNG, JPEG, JPG).")
+                return
+            else:
+                st.error("Unsupported file type. Please upload a PNG, JPEG, JPG, or PDF file.")
+                return
             ai_text = response.text
             result_json = extract_json(ai_text)
             if result_json and 'specializations' in result_json:

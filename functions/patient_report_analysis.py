@@ -1,8 +1,8 @@
 import streamlit as st
 import os
-import google.generativeai as genai
 import json
 import re
+from google import genai
 from utils.database import get_doctors
 
 GEMINI_API_KEY = "AIzaSyBNeVIUC4v1I8dptR4w6YvAVhhqvA1KZAw"
@@ -42,18 +42,14 @@ def show():
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel("gemini-pro-vision")
             prompt = "Analyze this medical report and suggest the top 1-2 doctor specializations to consult, and explain why. Respond ONLY in this JSON format: {\"specializations\": [\"specialization1\", ...], \"explanation\": \"...\"}"
-            if file_ext in ['.png', '.jpeg', '.jpg']:
-                gemini_input = {"mime_type": f"image/{file_ext[1:]}", "data": file_bytes}
-                response = model.generate_content([
-                    prompt,
-                    gemini_input
-                ])
-            elif file_ext == '.pdf':
-                st.error("PDF analysis is not supported by Gemini API directly. Please upload an image file (PNG, JPEG, JPG).")
-                return
+            if file_ext == '.pdf':
+                gemini_input = {"file": file_bytes, "file_type": "pdf"}
             else:
-                st.error("Unsupported file type. Please upload a PNG, JPEG, JPG, or PDF file.")
-                return
+                gemini_input = {"file": file_bytes, "file_type": "image"}
+            response = model.generate_content([
+                prompt,
+                gemini_input
+            ])
             ai_text = response.text
             result_json = extract_json(ai_text)
             if result_json and 'specializations' in result_json:

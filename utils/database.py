@@ -112,3 +112,29 @@ def modify_appointment(appointment_id, date, time, symptoms):
         'updated_at': datetime.now()
     })
     return True
+
+def save_prescription(appointment_id, doctor_id, prescription):
+    """
+    Save prescription text for both doctor and patient for a given appointment.
+    """
+    # Fetch appointment to get patient_id
+    apt_doc = db.collection('appointments').document(appointment_id).get()
+    if not apt_doc.exists:
+        return False
+    apt_data = apt_doc.to_dict()
+    patient_id = apt_data.get('patient_id')
+    # Save prescription in a subcollection for both doctor and patient
+    presc_data = {
+        'appointment_id': appointment_id,
+        'doctor_id': doctor_id,
+        'patient_id': patient_id,
+        'prescription': prescription,
+        'created_at': datetime.now()
+    }
+    # For doctor
+    db.collection('users').document(doctor_id).collection('prescriptions').add(presc_data)
+    # For patient
+    db.collection('users').document(patient_id).collection('prescriptions').add(presc_data)
+    # Optionally, attach prescription to appointment
+    db.collection('appointments').document(appointment_id).update({'prescription': prescription, 'prescription_created_at': datetime.now()})
+    return True

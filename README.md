@@ -1,6 +1,6 @@
 # MedAI: AI-Powered Healthcare Platform
 
-![MedAI Banner](static/medai_banner.png)
+![image](https://github.com/user-attachments/assets/c7b4dd15-3824-4184-9b91-09c01a7a3b4d)
 
 ## Overview
 MedAI is a comprehensive, AI-powered healthcare management and telemedicine platform designed for patients, doctors, and administrators. Built for the 2025 Hackathon, MedAI leverages advanced AI models (Google Gemini, HuggingFace) and deep learning to enhance diagnosis, streamline consultations, and empower users with actionable health insights.
@@ -87,6 +87,31 @@ MedAI/
 - Authentication: All sensitive features require user login.
 - Session Management: Secure session state for user context.
 - Data Privacy: Medical data is never shared outside the platform. API keys are stored securely.
+
+---
+
+## Open Source AI Models Used
+
+This project utilizes several open source AI models and APIs, especially from Hugging Face, to power its medical features:
+
+### 1. Disease Prediction (Allopathic)
+- **Model:** Custom-trained Scikit-learn model (see `models/pkl/disease_prediction_model.pkl`)
+- **Usage:** Predicts probable diseases based on user symptoms.
+
+### 2. Medical Chatbot & LLM-based Inference
+- **Model:** [`aaditya/Llama3-OpenBioLLM-70B`](https://huggingface.co/aaditya/Llama3-OpenBioLLM-70B) (via Hugging Face Inference API)
+- **Usage:**
+  - Medical Q&A Chatbot
+  - Ayurveda/Homeopathic diagnosis suggestions
+- **API Endpoint:** `https://router.huggingface.co/nebius/v1/chat/completions`
+- **Integration:** Used in `functions/chatbot.py`, `functions/disease_predictor.py`, and `utils/chatbot.py`.
+
+### 3. Hugging Face API Key
+- Users are prompted to provide their Hugging Face API key for LLM-powered features.
+
+---
+
+**If you use or extend this project, please credit the original model authors and Hugging Face!**
 
 ---
 

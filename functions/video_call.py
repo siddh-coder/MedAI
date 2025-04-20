@@ -1,14 +1,12 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import tempfile
-from PIL import Image
-import base64
-import io
 import os
-from google import genai
 from utils.user_history import add_history_entry
-from utils.database import get_patient_appointments, get_doctor_appointments
+from utils.database import get_patient_appointments, get_doctor_appointments, save_prescription
 from datetime import datetime, timedelta
+import requests
+import whisper
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
@@ -17,15 +15,29 @@ def generate_meeting_url(appointment_id):
     room_name = f"MedAI_{appointment_id}"
     return base_url + room_name
 
-def ai_detect_symptoms(image_file):
+def speech_to_text(audio_bytes):
+    # Use Whisper (openai-whisper) locally for free speech-to-text
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio:
+        tmp_audio.write(audio_bytes)
+        tmp_audio_path = tmp_audio.name
+    model = whisper.load_model("base")  # or "tiny" for faster, less accurate
+    result = model.transcribe(tmp_audio_path)
+    os.remove(tmp_audio_path)
+    return result["text"].strip()
+
+def generate_prescription(transcript):
+    # Use Gemini or Hugging Face LLM to generate prescription
     if not GEMINI_API_KEY:
         return "Gemini API key not set."
+    from google import genai
     client = genai.Client(api_key=GEMINI_API_KEY)
-    img = Image.open(image_file)
-    prompt = "Detect and list visible symptoms on the patient's body (e.g., rashes, conjunctivitis, swelling, etc.). Respond with a short comma-separated list."
+    prompt = (
+        "Given the following transcript of a doctor's instructions, generate a structured medical prescription including: "+
+        "1) Medicines (name, dosage, frequency), 2) Diagnosis, 3) Next steps/recommendations. Format as a clear prescription.\nTranscript: " + transcript
+    )
     response = client.models.generate_content(
         model="gemini-1.5-flash",
-        contents=[prompt, img]
+        contents=[prompt]
     )
     return response.text.strip()
 
@@ -45,49 +57,9 @@ def ai_summarize_meeting(messages):
     )
     return response.text.strip()
 
-def webcam_snapshot_widget(key):
-    """Streamlit component to capture webcam snapshot and return image bytes."""
-    img_data = st.components.v1.html(
-        f"""
-        <script>
-        let stream;
-        function captureAndSend() {{
-            const video = document.getElementById('webcam_{key}');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            const dataURL = canvas.toDataURL('image/png');
-            window.parent.postMessage({{"img_data": dataURL}}, "*");
-        }}
-        navigator.mediaDevices.getUserMedia({{ video: true }}).then(function(s) {{
-            stream = s;
-            const video = document.getElementById('webcam_{key}');
-            video.srcObject = stream;
-        }});
-        window.addEventListener('message', function(event) {{
-            if (event.data === 'capture_{key}') {{
-                captureAndSend();
-            }}
-        }});
-        </script>
-        <video id="webcam_{key}" autoplay playsinline width="320" height="240" style="border:1px solid #888;"></video>
-        <button onclick="window.parent.postMessage('capture_{key}', '*')">Capture Snapshot</button>
-        """,
-        height=270,
-    )
-    # Listen for image data from the component
-    img_b64 = st.query_params.get(f'img_data_{key}', [None])[0]
-    if img_b64:
-        header, img_str = img_b64.split(',', 1)
-        img_bytes = base64.b64decode(img_str)
-        return img_bytes
-    return None
-
 def show():
     st.title("Video Consultation")
-    st.markdown("Connect with your doctor through a secure video call and AI-powered assistant.")
+    st.markdown("Connect with your doctor through a secure video call.")
     
     if not st.session_state.authenticated:
         st.error("Please log in to access video consultations.")
@@ -99,12 +71,10 @@ def show():
     user_id = user.get("id")
     user_type = st.session_state.get("user_type", "")
     
-    # --- Secure Access: Only patient or doctor can join, and only at correct time ---
     appointment_ok = False
     appointment_data = None
     now = datetime.now()
     if appointment_id:
-        # Try to find appointment as patient or doctor
         appointments = []
         if user_type == 'patient':
             appointments = get_patient_appointments(user_id)
@@ -117,7 +87,7 @@ def show():
         if not appointment_ok:
             st.error("You are not authorized to join this appointment, or it is not within the scheduled time window.")
             return
-
+    
     if appointment_ok:
         meeting_url = generate_meeting_url(appointment_id)
         st.markdown(f"[Join Video Call in new tab]({meeting_url})", unsafe_allow_html=True)
@@ -128,6 +98,26 @@ def show():
             """,
             height=600,
         )
+
+        st.subheader("Prescription Recorder (Doctor Only)")
+        if user_type == 'doctor':
+            audio_file = st.file_uploader("Record or upload your prescription audio (WAV/MP3)", type=["wav", "mp3"])
+            if audio_file is not None:
+                audio_bytes = audio_file.read()
+                st.audio(audio_bytes, format='audio/wav')
+                if st.button("Transcribe & Generate Prescription", key=f"transcribe_{appointment_id}"):
+                    with st.spinner("Transcribing audio..."):
+                        transcript = speech_to_text(audio_bytes)
+                        st.write("**Transcript:**", transcript)
+                    with st.spinner("Generating prescription..."):
+                        prescription = generate_prescription(transcript)
+                        st.write("**Prescription:**")
+                        st.code(prescription)
+                        # Save prescription for both doctor and patient
+                        save_prescription(appointment_id, user_id, prescription)
+                        st.success("Prescription saved for both doctor and patient.")
+        else:
+            st.info("Only the doctor can record and save prescriptions.")
 
         st.subheader("Live Chat & AI Room")
         if f"chat_{appointment_id}" not in st.session_state:
@@ -150,16 +140,6 @@ def show():
             new_chat = chat + [{"role": user_type, "content": user_msg.strip()}]
             st.session_state[f"chat_{appointment_id}"] = new_chat
             st.session_state[clear_flag] = True
-
-        # Automated Webcam Snapshot & AI Symptom Detection
-        st.markdown("**AI Symptom Detection:** Capture a snapshot from your webcam for AI analysis.")
-        img_bytes = webcam_snapshot_widget(key=appointment_id)
-        if img_bytes:
-            with st.spinner("Analyzing snapshot with Gemini Vision..."):
-                ai_symptoms = ai_detect_symptoms(io.BytesIO(img_bytes))
-            new_chat = st.session_state[f"chat_{appointment_id}"] + [{"role": "ai", "content": f"Detected symptoms: {ai_symptoms}"}]
-            st.session_state[f"chat_{appointment_id}"] = new_chat
-            st.success(f"AI detected: {ai_symptoms}")
 
         # Display chat
         st.markdown("---")

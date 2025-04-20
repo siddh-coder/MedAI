@@ -40,7 +40,7 @@ def ai_summarize_meeting(messages):
         "Format output as a clear summary for medical records."
     )
     response = client.models.generate_content(
-        model="gemini-pro",
+        model="gemini-1.5-flash",
         contents=[f"{prompt}\n\n{chat_text}"]
     )
     return response.text.strip()

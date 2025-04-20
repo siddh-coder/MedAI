@@ -24,7 +24,7 @@ def ai_detect_symptoms(image_file):
     img = Image.open(image_file)
     prompt = "Detect and list visible symptoms on the patient's body (e.g., rashes, conjunctivitis, swelling, etc.). Respond with a short comma-separated list."
     response = client.models.generate_content(
-        model="gemini-pro-vision",
+        model="gemini-1.5-flash",
         contents=[prompt, img]
     )
     return response.text.strip()

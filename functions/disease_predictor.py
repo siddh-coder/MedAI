@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from utils.disease_prediction import predict_disease
 from utils.chatbot import stream_chatbot_response
-
+from utils.user_history import add_history_entry
 
 def show():
     st.title("Disease Predictor")
@@ -36,12 +36,19 @@ def show():
         if not selected_symptom_names:
             st.error("Please select at least one symptom.")
         else:
+            user_id = st.session_state.user.get("id")
             if inference_type == "Allopathic (AI)":
                 top_diseases = predict_disease(selected_symptom_names)
                 st.subheader("Prediction Results (Allopathic)")
                 for disease, prob in top_diseases:
                     st.write(f"**{disease}**: {prob:.2%}")
                 st.warning("This is a preliminary prediction. Please consult a doctor for an accurate diagnosis.")
+                # Save to history
+                add_history_entry(user_id, "inference", {
+                    "symptoms": selected_symptom_names,
+                    "result": str(top_diseases),
+                    "inference_type": inference_type
+                })
             else:
                 st.subheader(f"Prediction Results ({inference_type})")
                 prompt = f"Given these symptoms: {', '.join(selected_symptom_names)}, provide a {inference_type.lower()} diagnosis and possible remedies."
@@ -50,7 +57,12 @@ def show():
                 ]
                 placeholder = st.empty()
                 if api_key:
-                    stream_chatbot_response(messages, api_key, placeholder)
+                    response = stream_chatbot_response(messages, api_key, placeholder)
+                    add_history_entry(user_id, "inference", {
+                        "symptoms": selected_symptom_names,
+                        "result": response,
+                        "inference_type": inference_type
+                    })
                 else:
                     st.info("Please provide your HuggingFace API Key above.")
             

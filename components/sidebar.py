@@ -27,6 +27,12 @@ def render_sidebar():
                 if st.button("Medical Report Analysis", key="sidebar_patient_report_analysis"):
                     st.session_state.current_page = 'patient_report_analysis'
                     st.rerun()
+                if st.button("History", key="sidebar_history"):
+                    st.session_state.current_page = 'history'
+                    st.rerun()
+                if st.button("Chatbot", key="sidebar_chatbot"):
+                    st.session_state.current_page = 'chatbot'
+                    st.rerun()
             
             elif st.session_state.user_type == 'doctor':
                 if st.button("My Dashboard", key="sidebar_doctor_dashboard"):
@@ -35,10 +41,22 @@ def render_sidebar():
                 if st.button("View Appointments", key="sidebar_doctor_appointments"):
                     st.session_state.current_page = 'appointment'
                     st.rerun()
+                if st.button("History", key="sidebar_history_doctor"):
+                    st.session_state.current_page = 'history'
+                    st.rerun()
+                if st.button("Chatbot", key="sidebar_chatbot_doctor"):
+                    st.session_state.current_page = 'chatbot'
+                    st.rerun()
             
             elif st.session_state.user_type == 'admin':
                 if st.button("Admin Dashboard", key="sidebar_admin_dashboard"):
                     st.session_state.current_page = 'admin_dashboard'
+                    st.rerun()
+                if st.button("History", key="sidebar_history_admin"):
+                    st.session_state.current_page = 'history'
+                    st.rerun()
+                if st.button("Chatbot", key="sidebar_chatbot_admin"):
+                    st.session_state.current_page = 'chatbot'
                     st.rerun()
             
             if st.button("Blogs", key="sidebar_blog"):

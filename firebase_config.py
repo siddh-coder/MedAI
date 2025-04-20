@@ -9,7 +9,7 @@ def initialize_firebase():
                 # Use secrets from Streamlit Cloud
                 firebase_creds = st.secrets["FIREBASE"]
                 cred = credentials.Certificate(dict(firebase_creds))
-                st.info("Initialized Firebase from Streamlit secrets.")
+                # st.info("Initialized Firebase from Streamlit secrets.")
             else:
                 # Fallback to local file (for local development)
                 service_account_path = "service-account-key.json"
@@ -34,4 +34,3 @@ def initialize_firebase():
 
 def get_db():
     return initialize_firebase()
-

@@ -10,10 +10,7 @@ from utils.user_history import add_history_entry
 from utils.database import get_patient_appointments, get_doctor_appointments
 from datetime import datetime, timedelta
 
-# Ensure you have set your Gemini API key in st.secrets["GEMINI_API_KEY"]
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 def generate_meeting_url(appointment_id):
     base_url = "https://meet.jit.si/"
@@ -21,20 +18,20 @@ def generate_meeting_url(appointment_id):
     return base_url + room_name
 
 def ai_detect_symptoms(image_file):
-    """Send image to Gemini Vision API and extract visible symptoms."""
     if not GEMINI_API_KEY:
         return "Gemini API key not set."
-    model = genai.GenerativeModel("gemini-pro-vision")
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    model = client.models.get("gemini-pro-vision")
     img = Image.open(image_file)
     prompt = "Detect and list visible symptoms on the patient's body (e.g., rashes, conjunctivitis, swelling, etc.). Respond with a short comma-separated list."
     response = model.generate_content([prompt, img])
     return response.text.strip()
 
 def ai_summarize_meeting(messages):
-    """Summarize the chat and extract medicines, diagnoses, and important points."""
     if not GEMINI_API_KEY:
         return "Gemini API key not set."
-    model = genai.GenerativeModel("gemini-pro")
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    model = client.models.get("gemini-pro")
     chat_text = '\n'.join([f"{m['role']}: {m['content']}" for m in messages])
     prompt = (
         "Given the following doctor-patient chat and AI-detected symptoms, summarize the meeting. "

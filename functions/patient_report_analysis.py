@@ -6,7 +6,8 @@ from google import genai
 from utils.database import get_doctors
 from utils.user_history import add_history_entry
 
-GEMINI_API_KEY = "AIzaSyBNeVIUC4v1I8dptR4w6YvAVhhqvA1KZAw"
+
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 def extract_json(text):
     text = text.strip()

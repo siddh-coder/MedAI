@@ -108,11 +108,7 @@ def show():
             appointments = get_doctor_appointments(user_id)
         for apt in appointments:
             if str(apt.get('id')) == str(appointment_id):
-                appointment_data = apt
-                # Check time window (±1 hour)
-                apt_datetime = datetime.strptime(apt['date'] + ' ' + apt['time'], '%Y-%m-%d %H:%M')
-                if abs((now - apt_datetime).total_seconds()) <= 60*60:  # Allow 1 hour window
-                    appointment_ok = True
+                appointment_ok = True
                 break
         if not appointment_ok:
             st.error("You are not authorized to join this appointment, or it is not within the scheduled time window.")
@@ -139,9 +135,12 @@ def show():
         with col1:
             user_msg = st.text_input("Type a message", key=f"chat_input_{appointment_id}")
         with col2:
-            if st.button("Send", key=f"send_btn_{appointment_id}") and user_msg.strip():
-                chat.append({"role": user_type, "content": user_msg.strip()})
-                st.session_state[f"chat_input_{appointment_id}"] = ""
+            send_clicked = st.button("Send", key=f"send_btn_{appointment_id}")
+        # Handle chat send
+        if send_clicked and user_msg.strip():
+            new_chat = chat + [{"role": user_type, "content": user_msg.strip()}]
+            st.session_state[f"chat_{appointment_id}"] = new_chat
+            st.session_state[f"chat_input_{appointment_id}"] = ""
 
         # Automated Webcam Snapshot & AI Symptom Detection
         st.markdown("**AI Symptom Detection:** Capture a snapshot from your webcam for AI analysis.")
@@ -149,7 +148,8 @@ def show():
         if img_bytes:
             with st.spinner("Analyzing snapshot with Gemini Vision..."):
                 ai_symptoms = ai_detect_symptoms(io.BytesIO(img_bytes))
-            chat.append({"role": "ai", "content": f"Detected symptoms: {ai_symptoms}"})
+            new_chat = st.session_state[f"chat_{appointment_id}"] + [{"role": "ai", "content": f"Detected symptoms: {ai_symptoms}"}]
+            st.session_state[f"chat_{appointment_id}"] = new_chat
             st.success(f"AI detected: {ai_symptoms}")
 
         # Display chat

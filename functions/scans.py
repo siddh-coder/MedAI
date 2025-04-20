@@ -42,6 +42,10 @@ def show():
         "Cataract Scan": {
             "description": "Eye imaging to diagnose cataracts.",
             "details": "Specialized imaging techniques, such as slit-lamp exams and optical coherence tomography (OCT), help detect clouding of the eye's lens, guiding surgical or non-surgical interventions."
+        },
+        "Chest X-Ray Scan": {
+            "description": "X-ray imaging to assess lung and chest health.",
+            "details": "Chest X-rays are commonly used to diagnose pneumonia, tuberculosis, lung cancer, and other conditions. For advanced AI-powered pneumonia detection, visit our dedicated app: [PneumaScan](https://pneumascan.streamlit.app)."
         }
     }
     

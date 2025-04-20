@@ -21,24 +21,28 @@ def ai_detect_symptoms(image_file):
     if not GEMINI_API_KEY:
         return "Gemini API key not set."
     client = genai.Client(api_key=GEMINI_API_KEY)
-    model = client.models.get("gemini-pro-vision")
     img = Image.open(image_file)
     prompt = "Detect and list visible symptoms on the patient's body (e.g., rashes, conjunctivitis, swelling, etc.). Respond with a short comma-separated list."
-    response = model.generate_content([prompt, img])
+    response = client.models.generate_content(
+        model="gemini-pro-vision",
+        contents=[prompt, img]
+    )
     return response.text.strip()
 
 def ai_summarize_meeting(messages):
     if not GEMINI_API_KEY:
         return "Gemini API key not set."
     client = genai.Client(api_key=GEMINI_API_KEY)
-    model = client.models.get("gemini-pro")
     chat_text = '\n'.join([f"{m['role']}: {m['content']}" for m in messages])
     prompt = (
         "Given the following doctor-patient chat and AI-detected symptoms, summarize the meeting. "
         "Extract and list: 1) Medicines suggested by the doctor, 2) Diagnosis, 3) Next steps or recommendations. "
         "Format output as a clear summary for medical records."
     )
-    response = model.generate_content(f"{prompt}\n\n{chat_text}")
+    response = client.models.generate_content(
+        model="gemini-pro",
+        contents=[f"{prompt}\n\n{chat_text}"]
+    )
     return response.text.strip()
 
 def webcam_snapshot_widget(key):

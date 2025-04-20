@@ -1,17 +1,25 @@
 import streamlit as st
 from PIL import Image
-import torch
-from transformers import AutoImageProcessor, AutoModelForImageClassification
+import numpy as np
+from tensorflow import keras
 
 @st.cache_resource(show_spinner=False)
 def get_brain_model():
     try:
-        processor = AutoImageProcessor.from_pretrained("jayanta/vit-base-patch16-224-in21k-face-recognition")
-        model = AutoModelForImageClassification.from_pretrained("jayanta/vit-base-patch16-224-in21k-face-recognition")
-        return processor, model
+        model = keras.models.load_model("../models/pkl/tumor.h5")
+        return model
     except Exception as e:
-        st.error(f"Failed to load model and processor. Error: {e}")
-        return None, None
+        st.error(f"Failed to load brain tumor model. Error: {e}")
+        return None
+
+def preprocess_brain_image(image, target_size=(224, 224)):
+    image = image.resize(target_size)
+    img_array = np.array(image) / 255.0
+    if img_array.ndim == 2:
+        img_array = np.stack([img_array]*3, axis=-1)
+    img_array = img_array[..., :3]  # Ensure 3 channels
+    img_array = np.expand_dims(img_array, axis=0)
+    return img_array
 
 def show():
     st.title("Medical Scans")
@@ -50,15 +58,12 @@ def show():
                 if uploaded_scan is not None:
                     try:
                         image = Image.open(uploaded_scan).convert("RGB")
-                        processor, model = get_brain_model()
-                        if processor is None or model is None:
+                        model = get_brain_model()
+                        if model is None:
                             continue
-                        inputs = processor(images=image, return_tensors="pt")
-                        with torch.no_grad():
-                            outputs = model(**inputs)
-                            logits = outputs.logits
-                            predicted_class_idx = logits.argmax(-1).item()
-                            label = model.config.id2label[predicted_class_idx]
+                        img_array = preprocess_brain_image(image)
+                        prediction = model.predict(img_array)
+                        label = "Tumor Detected" if prediction[0][0] > 0.5 else "No Tumor Detected"
                         st.success(f"Inference Result: {label}")
                     except Exception as e:
                         st.error(f"Could not process the scan. Please ensure it is a valid MRI image. Error: {e}")

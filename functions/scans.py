@@ -6,7 +6,7 @@ from tensorflow import keras
 @st.cache_resource(show_spinner=False)
 def get_brain_model():
     try:
-        model = keras.models.load_model("../models/pkl/tumor.h5")
+        model = keras.models.load_model("./models/pkl/tumor.h5")
         return model
     except Exception as e:
         st.error(f"Failed to load brain tumor model. Error: {e}")

@@ -78,7 +78,7 @@ def webcam_snapshot_widget(key):
         height=270,
     )
     # Listen for image data from the component
-    img_b64 = st.experimental_get_query_params().get(f'img_data_{key}', [None])[0]
+    img_b64 = st.query_params().get(f'img_data_{key}', [None])[0]
     if img_b64:
         header, img_str = img_b64.split(',', 1)
         img_bytes = base64.b64decode(img_str)

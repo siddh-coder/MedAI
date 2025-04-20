@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import json
 from tensorflow import keras
+from tensorflow.keras.applications.efficientnet import preprocess_input
 
 @st.cache_resource(show_spinner=False)
 def get_brain_model():
@@ -17,11 +18,12 @@ def get_brain_model():
 
 def preprocess_brain_image(image, target_size=(224, 224)):
     image = image.resize(target_size)
-    img_array = np.array(image) # / 255.0
+    img_array = np.array(image)
     if img_array.ndim == 2:
         img_array = np.stack([img_array]*3, axis=-1)
     img_array = img_array[..., :3]  # Ensure 3 channels
     img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)  # EfficientNet preprocessing
     return img_array.astype(np.float32)
 
 def show():
@@ -69,6 +71,7 @@ def show():
                         pred_class = np.argmax(preds, axis=1)[0]
                         label = class_names[pred_class]
                         st.success(f"Inference Result: {label}")
+                        st.markdown(f"**Raw Model Output:** {preds[0].tolist()}")
                     except Exception as e:
                         st.error(f"Could not process the scan. Please ensure it is a valid MRI image. Error: {e}")
             if st.button("Learn More", key=f"learn_{scan_name}"):

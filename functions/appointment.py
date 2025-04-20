@@ -32,26 +32,34 @@ def show():
     time = st.time_input("Select Time")
     symptoms = st.text_area("Describe Your Symptoms")
     
+    # Store appointment id after booking
+    if 'last_appointment_id' not in st.session_state:
+        st.session_state['last_appointment_id'] = None
+    
     if st.button("Book Appointment"):
         if not symptoms:
             st.error("Please describe your symptoms.")
         else:
             doctor_id = doctor_options[selected_doctor]
             try:
-                create_appointment(
+                appointment_id = create_appointment(
                     patient_id=user['id'],
                     doctor_id=doctor_id,
                     date=date.strftime('%Y-%m-%d'),
                     time=time.strftime('%H:%M'),
                     symptoms=symptoms
                 )
-                st.success("Appointment booked successfully!")
+                st.session_state['last_appointment_id'] = appointment_id
+                st.success(f"Appointment booked successfully! Your Appointment ID: {appointment_id}")
             except Exception as e:
                 st.error(f"Failed to book appointment: {e}")
             if 'selected_doctor_id' in st.session_state:
                 del st.session_state.selected_doctor_id
             st.session_state['modify_open'] = None
             st.rerun()
+    
+    if st.session_state.get('last_appointment_id'):
+        st.info(f"Your last booked Appointment ID: {st.session_state['last_appointment_id']}")
     
     st.subheader("Your Upcoming Appointments")
     try:
@@ -66,6 +74,7 @@ def show():
         modify_open = st.session_state.get('modify_open', None)
         for apt in appointments:
             with st.expander(f"Appointment with Dr. {apt.get('doctor_name', 'Unknown')} - {apt['date']}"):
+                st.write(f"**Appointment ID:** `{apt.get('id', 'N/A')}`")
                 st.write(f"**Specialization**: {apt.get('doctor_specialization', 'General')}")
                 st.write(f"**Time**: {apt['time']}")
                 st.write(f"**Symptoms**: {apt['symptoms']}")

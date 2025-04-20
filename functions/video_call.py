@@ -7,6 +7,8 @@ import io
 import os
 from google import genai
 from utils.user_history import add_history_entry
+from utils.database import get_patient_appointments, get_doctor_appointments
+from datetime import datetime, timedelta
 
 # Ensure you have set your Gemini API key in st.secrets["GEMINI_API_KEY"]
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
@@ -96,7 +98,30 @@ def show():
     user_id = user.get("id")
     user_type = st.session_state.get("user_type", "")
     
+    # --- Secure Access: Only patient or doctor can join, and only at correct time ---
+    appointment_ok = False
+    appointment_data = None
+    now = datetime.now()
     if appointment_id:
+        # Try to find appointment as patient or doctor
+        appointments = []
+        if user_type == 'patient':
+            appointments = get_patient_appointments(user_id)
+        elif user_type == 'doctor':
+            appointments = get_doctor_appointments(user_id)
+        for apt in appointments:
+            if str(apt.get('id')) == str(appointment_id):
+                appointment_data = apt
+                # Check time window (±1 hour)
+                apt_datetime = datetime.strptime(apt['date'] + ' ' + apt['time'], '%Y-%m-%d %H:%M')
+                if abs((now - apt_datetime).total_seconds()) <= 60*60:  # Allow 1 hour window
+                    appointment_ok = True
+                break
+        if not appointment_ok:
+            st.error("You are not authorized to join this appointment, or it is not within the scheduled time window.")
+            return
+
+    if appointment_ok:
         meeting_url = generate_meeting_url(appointment_id)
         st.markdown(f"[Join Video Call in new tab]({meeting_url})", unsafe_allow_html=True)
         components.html(
@@ -160,8 +185,6 @@ def show():
                     st.success("Summary saved to doctor's history. Please ensure it is also saved to the patient's history as needed.")
             else:
                 st.info("Only the doctor can validate and save the meeting summary.")
-    else:
-        st.info("Please enter a valid Appointment ID.")
 
     st.subheader("Tips for a Successful Call")
     st.markdown("""

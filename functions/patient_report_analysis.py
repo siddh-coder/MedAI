@@ -65,8 +65,18 @@ def show():
             ai_text = response.text
             result_json = extract_json(ai_text)
             if result_json and 'specializations' in result_json:
-                st.success(f"Recommended Specializations: {', '.join(result_json['specializations'])}")
+                specialization = ', '.join(result_json['specializations'])
+                st.success(f"Recommended Specialist: {specialization}")
                 st.markdown(f"**AI Explanation:** {result_json.get('explanation', '')}")
+                # Ask Gemini for further tests and costs
+                test_prompt = f"Given the medical report and the suggested specialization ({specialization}), recommend further diagnostic tests to pinpoint the disease, along with their approximate costs in INR (Rs). Present as a list."
+                # Call Gemini API again for test recommendations
+                test_response = client.models.generate_content(
+                    model="gemini-1.5-flash",
+                    contents=[sample_doc, test_prompt]
+                )
+                tests_text = test_response.text
+                st.info("**Recommended Further Tests & Costs:**\n" + tests_text)
                 doctors = get_doctors()
                 matched = [doc for doc in doctors if any(
                     spec.lower() in doc.get('specialization', '').lower() for spec in result_json['specializations'])]

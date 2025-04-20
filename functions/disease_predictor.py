@@ -28,8 +28,10 @@ def show():
         ["Allopathic (AI)", "Ayurveda (LLM)", "Homeopathic (LLM)"]
     )
     
-    api_key = "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"
-        
+    api_key = st.secrets.get("HF_API_KEY", "")
+    if not api_key:
+        api_key = st.text_input("Enter HuggingFace API Key", type="password")
+    
     if st.button("Predict Disease"):
         if not selected_symptom_names:
             st.error("Please select at least one symptom.")

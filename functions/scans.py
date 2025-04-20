@@ -1,16 +1,19 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
+import json
 from tensorflow import keras
 
 @st.cache_resource(show_spinner=False)
 def get_brain_model():
     try:
-        model = keras.models.load_model("../models/pkl/tumor.h5")
-        return model
+        model = keras.models.load_model("models/pkl/tumor.h5")
+        with open("models/pkl/tumor_class_names.json") as f:
+            class_names = json.load(f)
+        return model, class_names
     except Exception as e:
-        st.error(f"Failed to load brain tumor model. Error: {e}")
-        return None
+        st.error(f"Failed to load brain tumor model or class names. Error: {e}")
+        return None, None
 
 def preprocess_brain_image(image, target_size=(224, 224)):
     image = image.resize(target_size)
@@ -19,7 +22,7 @@ def preprocess_brain_image(image, target_size=(224, 224)):
         img_array = np.stack([img_array]*3, axis=-1)
     img_array = img_array[..., :3]  # Ensure 3 channels
     img_array = np.expand_dims(img_array, axis=0)
-    return img_array
+    return img_array.astype(np.float32)
 
 def show():
     st.title("Medical Scans")
@@ -58,12 +61,13 @@ def show():
                 if uploaded_scan is not None:
                     try:
                         image = Image.open(uploaded_scan).convert("RGB")
-                        model = get_brain_model()
-                        if model is None:
-                            continue
+                        model, class_names = get_brain_model()
+                        if model is None or class_names is None:
+                            return
                         img_array = preprocess_brain_image(image)
-                        prediction = model.predict(img_array)
-                        label = "Tumor Detected" if prediction[0][0] > 0.5 else "No Tumor Detected"
+                        preds = model.predict(img_array)
+                        pred_class = np.argmax(preds, axis=1)[0]
+                        label = class_names[pred_class]
                         st.success(f"Inference Result: {label}")
                     except Exception as e:
                         st.error(f"Could not process the scan. Please ensure it is a valid MRI image. Error: {e}")

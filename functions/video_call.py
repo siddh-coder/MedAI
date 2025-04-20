@@ -134,15 +134,18 @@ def show():
         col1, col2 = st.columns([3, 1])
         with col2:
             send_clicked = st.button("Send", key=f"send_btn_{appointment_id}")
-        if send_clicked and st.session_state.get(f"chat_input_{appointment_id}", "").strip():
-            # Add message to chat
-            new_chat = chat + [{"role": user_type, "content": st.session_state[f"chat_input_{appointment_id}"].strip()}]
-            st.session_state[f"chat_{appointment_id}"] = new_chat
-            # Clear the input for next run
-            st.session_state[f"chat_input_{appointment_id}"] = ""
-            st.experimental_rerun()
+        # Handle clearing input on next run
+        clear_flag = f"clear_input_{appointment_id}"
+        input_key = f"chat_input_{appointment_id}"
+        if st.session_state.get(clear_flag):
+            st.session_state[input_key] = ""
+            st.session_state[clear_flag] = False
         with col1:
-            user_msg = st.text_input("Type a message", key=f"chat_input_{appointment_id}")
+            user_msg = st.text_input("Type a message", key=input_key)
+        if send_clicked and user_msg.strip():
+            new_chat = chat + [{"role": user_type, "content": user_msg.strip()}]
+            st.session_state[f"chat_{appointment_id}"] = new_chat
+            st.session_state[clear_flag] = True
 
         # Automated Webcam Snapshot & AI Symptom Detection
         st.markdown("**AI Symptom Detection:** Capture a snapshot from your webcam for AI analysis.")

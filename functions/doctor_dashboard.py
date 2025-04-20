@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.database import get_doctor_appointments, get_user_by_id
+from utils.database import get_doctor_appointments, get_user_by_id, update_appointment_status
 
 def show():
     st.title("Doctor Dashboard")
@@ -19,6 +19,7 @@ def show():
         else:
             for apt in appointments:
                 with st.expander(f"Appointment with {apt['patient_name']} - {apt['date']}"):
+                    st.write(f"Appointment ID: {apt['id']}")
                     st.write(f"**Time**: {apt['time']}")
                     st.write(f"**Symptoms**: {apt['symptoms']}")
                     st.write(f"**Status**: {apt['status'].capitalize()}")

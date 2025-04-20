@@ -17,7 +17,7 @@ def get_brain_model():
 
 def preprocess_brain_image(image, target_size=(224, 224)):
     image = image.resize(target_size)
-    img_array = np.array(image) / 255.0
+    img_array = np.array(image) # / 255.0
     if img_array.ndim == 2:
         img_array = np.stack([img_array]*3, axis=-1)
     img_array = img_array[..., :3]  # Ensure 3 channels

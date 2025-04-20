@@ -5,7 +5,7 @@ from utils.auth import check_authentication
 from components.sidebar import render_sidebar
 from functions import (
     home, patient_dashboard, doctor_dashboard, admin_dashboard,
-    appointment, disease_predictor, blog, scans, video_call, patient_report_analysis
+    appointment, disease_predictor, blog, scans, video_call, patient_report_analysis, history, chatbot
 )
 
 st.set_page_config(
@@ -47,7 +47,9 @@ def main():
         'blog': blog,
         'scans': scans,
         'video_call': video_call,
-        'patient_report_analysis': patient_report_analysis
+        'patient_report_analysis': patient_report_analysis,
+        'history': history,
+        'chatbot': chatbot
     }
     
     if not check_authentication():

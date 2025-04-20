@@ -4,6 +4,7 @@ import json
 import re
 from google import genai
 from utils.database import get_doctors
+from utils.user_history import add_history_entry
 
 GEMINI_API_KEY = "AIzaSyBNeVIUC4v1I8dptR4w6YvAVhhqvA1KZAw"
 
@@ -66,6 +67,7 @@ def show():
             result_json = extract_json(ai_text)
             if result_json and 'specializations' in result_json:
                 specialization = ', '.join(result_json['specializations'])
+                user_id = st.session_state.user.get("id")
                 st.success(f"Recommended Specialist: {specialization}")
                 st.markdown(f"**AI Explanation:** {result_json.get('explanation', '')}")
                 # Ask Gemini for further tests and costs
@@ -77,6 +79,12 @@ def show():
                 )
                 tests_text = test_response.text
                 st.info("**Recommended Further Tests & Costs:**\n" + tests_text)
+                # Save to user history
+                add_history_entry(user_id, "report_analysis", {
+                    "file_name": file_name,
+                    "specialization": specialization,
+                    "tests": tests_text
+                })
                 doctors = get_doctors()
                 matched = [doc for doc in doctors if any(
                     spec.lower() in doc.get('specialization', '').lower() for spec in result_json['specializations'])]

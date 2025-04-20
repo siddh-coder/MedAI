@@ -6,8 +6,10 @@ from utils.user_history import add_history_entry
 from utils.database import get_patient_appointments, get_doctor_appointments, save_prescription
 from datetime import datetime, timedelta
 import requests
-import whisper
-from audio_recorder_streamlit import audio_recorder
+from vosk import Model, KaldiRecognizer
+import wave
+import json
+import audio_recorder_streamlit
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
@@ -17,14 +19,25 @@ def generate_meeting_url(appointment_id):
     return base_url + room_name
 
 def speech_to_text(audio_bytes):
-    # Use Whisper (openai-whisper) locally for free speech-to-text
     with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio:
         tmp_audio.write(audio_bytes)
         tmp_audio_path = tmp_audio.name
-    model = whisper.load_model("base")  # or "tiny" for faster, less accurate
-    result = model.transcribe(tmp_audio_path)
+    wf = wave.open(tmp_audio_path, "rb")
+    model = Model("vosk-model-small-en-us-0.15")  # Free English model
+    rec = KaldiRecognizer(model, wf.getframerate())
+    result = ""
+    while True:
+        data = wf.readframes(4000)
+        if len(data) == 0:
+            break
+        if rec.AcceptWaveform(data):
+            res = json.loads(rec.Result())
+            result += res.get("text", "")
+    res = json.loads(rec.FinalResult())
+    result += res.get("text", "")
+    wf.close()
     os.remove(tmp_audio_path)
-    return result["text"].strip()
+    return result.strip()
 
 def generate_prescription(transcript):
     # Use Gemini or Hugging Face LLM to generate prescription
@@ -57,6 +70,16 @@ def ai_summarize_meeting(messages):
         contents=[f"{prompt}\n\n{chat_text}"]
     )
     return response.text.strip()
+
+def get_transcription_history(appointment_id):
+    if f"transcription_history_{appointment_id}" not in st.session_state:
+        st.session_state[f"transcription_history_{appointment_id}"] = []
+    return st.session_state[f"transcription_history_{appointment_id}"]
+
+def add_transcription_history(appointment_id, transcript):
+    history = get_transcription_history(appointment_id)
+    history.append(transcript)
+    st.session_state[f"transcription_history_{appointment_id}"] = history
 
 def show():
     st.title("Video Consultation")
@@ -102,14 +125,22 @@ def show():
 
         st.subheader("Prescription Recorder (Doctor Only)")
         if user_type == 'doctor':
-            st.info("Press the microphone button to record your prescription instructions. When done, click 'Transcribe & Generate Prescription'.")
-            audio_bytes = audio_recorder()
+            st.info("Press the microphone button to record your prescription instructions. Each recording will be transcribed and added below.")
+            audio_bytes = audio_recorder_streamlit.audio_recorder(
+                pause_threshold=1.0,
+                text="Record Prescription",
+                icon_name="microphone",
+                icon_size="2x",
+                recording_color="#e63946",
+                neutral_color="#457b9d"
+            )
             if audio_bytes:
                 st.audio(audio_bytes, format='audio/wav')
+                with st.spinner("Transcribing audio..."):
+                    transcript = speech_to_text(audio_bytes)
+                    add_transcription_history(appointment_id, transcript)
+                    st.success("Transcript added to history.")
                 if st.button("Transcribe & Generate Prescription", key=f"transcribe_{appointment_id}"):
-                    with st.spinner("Transcribing audio..."):
-                        transcript = speech_to_text(audio_bytes)
-                        st.write("**Transcript:**", transcript)
                     with st.spinner("Generating prescription..."):
                         prescription = generate_prescription(transcript)
                         st.write("**Prescription:**")
@@ -119,6 +150,15 @@ def show():
                         st.success("Prescription saved for both doctor and patient.")
         else:
             st.info("Only the doctor can record and save prescriptions.")
+
+        # Show transcription history below
+        st.subheader("Transcription History")
+        history = get_transcription_history(appointment_id)
+        if history:
+            for idx, t in enumerate(history, 1):
+                st.markdown(f"**{idx}.** {t}")
+        else:
+            st.info("No transcriptions yet.")
 
         st.subheader("Tips for a Successful Call")
         st.markdown("""

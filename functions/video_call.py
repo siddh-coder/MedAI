@@ -7,6 +7,7 @@ from utils.database import get_patient_appointments, get_doctor_appointments, sa
 from datetime import datetime, timedelta
 import requests
 import whisper
+from audio_recorder_streamlit import audio_recorder
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
@@ -101,9 +102,9 @@ def show():
 
         st.subheader("Prescription Recorder (Doctor Only)")
         if user_type == 'doctor':
-            audio_file = st.file_uploader("Record or upload your prescription audio (WAV/MP3)", type=["wav", "mp3"])
-            if audio_file is not None:
-                audio_bytes = audio_file.read()
+            st.info("Press the microphone button to record your prescription instructions. When done, click 'Transcribe & Generate Prescription'.")
+            audio_bytes = audio_recorder()
+            if audio_bytes:
                 st.audio(audio_bytes, format='audio/wav')
                 if st.button("Transcribe & Generate Prescription", key=f"transcribe_{appointment_id}"):
                     with st.spinner("Transcribing audio..."):
@@ -119,62 +120,9 @@ def show():
         else:
             st.info("Only the doctor can record and save prescriptions.")
 
-        st.subheader("Live Chat & AI Room")
-        if f"chat_{appointment_id}" not in st.session_state:
-            st.session_state[f"chat_{appointment_id}"] = []
-        chat = st.session_state[f"chat_{appointment_id}"]
-
-        # Chat input
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            send_clicked = st.button("Send", key=f"send_btn_{appointment_id}")
-        # Handle clearing input on next run
-        clear_flag = f"clear_input_{appointment_id}"
-        input_key = f"chat_input_{appointment_id}"
-        if st.session_state.get(clear_flag):
-            st.session_state[input_key] = ""
-            st.session_state[clear_flag] = False
-        with col1:
-            user_msg = st.text_input("Type a message", key=input_key)
-        if send_clicked and user_msg.strip():
-            new_chat = chat + [{"role": user_type, "content": user_msg.strip()}]
-            st.session_state[f"chat_{appointment_id}"] = new_chat
-            st.session_state[clear_flag] = True
-
-        # Display chat
-        st.markdown("---")
-        st.markdown("### Chat History")
-        for m in chat:
-            if m["role"] == "ai":
-                st.info(m["content"])
-            elif m["role"] == "doctor":
-                st.markdown(f"**Doctor:** {m['content']}")
-            elif m["role"] == "patient":
-                st.markdown(f"**Patient:** {m['content']}")
-            else:
-                st.markdown(f"**{m['role'].capitalize()}:** {m['content']}")
-
-        # AI Meeting Notes
-        st.markdown("---")
-        st.subheader("AI Meeting Summary & Save to History")
-        if st.button("Summarize & Save", key=f"summarize_btn_{appointment_id}"):
-            with st.spinner("Summarizing meeting with Gemini..."):
-                summary = ai_summarize_meeting(chat)
-            # Doctor validates/edits summary
-            if user_type == "doctor":
-                edited_summary = st.text_area("Review/Edit Meeting Summary before saving:", summary, key=f"summary_edit_{appointment_id}")
-                if st.button("Confirm & Save to History", key=f"save_history_{appointment_id}"):
-                    # Save to both doctor and patient history
-                    add_history_entry(user_id, "meeting_summary", {"summary": edited_summary, "appointment_id": appointment_id})
-                    # Try to get patient_id from chat or context if available
-                    # Here, you would need to add logic to find the patient_id for this appointment
-                    st.success("Summary saved to doctor's history. Please ensure it is also saved to the patient's history as needed.")
-            else:
-                st.info("Only the doctor can validate and save the meeting summary.")
-
-    st.subheader("Tips for a Successful Call")
-    st.markdown("""
-    - Ensure a stable internet connection.
-    - Use headphones for better audio quality.
-    - Find a quiet, well-lit space for your consultation.
-    """)
+        st.subheader("Tips for a Successful Call")
+        st.markdown("""
+        - Ensure a stable internet connection.
+        - Use headphones for better audio quality.
+        - Find a quiet, well-lit space for your consultation.
+        """)

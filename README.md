@@ -1,6 +1,7 @@
 # MedAI: AI-Powered Healthcare Platform
 
-![image](https://github.com/user-attachments/assets/c7b4dd15-3824-4184-9b91-09c01a7a3b4d)
+![image](https://github.com/user-attachments/assets/00f94065-b88f-4bf0-b539-0c9e1cd9471d)
+
 
 ## Overview
 MedAI is a comprehensive, AI-powered healthcare management and telemedicine platform designed for patients, doctors, and administrators. Built for the 2025 Hackathon, MedAI leverages advanced AI models (Google Gemini, HuggingFace) and deep learning to enhance diagnosis, streamline consultations, and empower users with actionable health insights.

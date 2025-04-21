@@ -154,6 +154,8 @@ streamlit run app.py
 - Gemini API: Used for text and vision-based inference (symptom detection, summarization, report analysis).
 - Custom Models: Brain tumor and cataract detection models (Keras/TensorFlow, stored in `models/pkl/`).
 - Disease Prediction: Classical ML model using symptom data (`models/csv/Training.csv`).
+- Open source Hugging Face models :  [`aaditya/Llama3-OpenBioLLM-70B`](https://huggingface.co/aaditya/Llama3-OpenBioLLM-70B)
+- Training Script for Brain Tumor Classification : https://colab.research.google.com/drive/1byZm5dxZmhVTnx9aNt8sU5Qz-UepRJvN?usp=sharing
 
 ---
 
@@ -173,8 +175,7 @@ streamlit run app.py
 
 ## Contributors
 - Siddharth Tripathi(IMT2024011) (Lead Developer)
-- [Add other contributors here]
-
+  
 ---
 
 ## License
